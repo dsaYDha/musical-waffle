@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>문명 스타일 4X 전략 — 1단계</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- 지도 -->
+  <canvas id="map-canvas" aria-label="게임 지도"></canvas>
+
+  <!-- HUD -->
+  <div id="hud">
+    <header id="top-bar" class="panel">
+      <div class="tb-item"><span class="tb-label">턴</span><strong id="tb-turn">1</strong></div>
+      <div class="tb-item tb-year" id="tb-year">기원전 4000년</div>
+      <div class="tb-item tb-res" title="금 — 이후 단계에서 사용"><span class="dot dot-gold"></span><span class="tb-label">금</span><strong id="tb-gold">0</strong></div>
+      <div class="tb-item tb-res" title="과학 — 이후 단계에서 사용"><span class="dot dot-science"></span><span class="tb-label">과학</span><strong id="tb-science">0</strong></div>
+      <div class="tb-spacer"></div>
+      <div id="debug-badge" class="tb-item tb-debug hidden" title="F2로 끄기">안개 해제 (F2)</div>
+      <div class="tb-item tb-seed" title="이 시드를 새 게임에 넣으면 같은 지도가 나옵니다"><span class="tb-label">시드</span><strong id="tb-seed">-</strong></div>
+      <button id="btn-new-game" class="btn btn-small" type="button">새 게임</button>
+    </header>
+
+    <div id="hud-body">
+    <!-- 타일 정보 -->
+    <section id="tile-panel" class="panel hidden" aria-live="polite">
+      <div class="panel-title"><span id="tile-name"></span><span id="tile-coord" class="muted"></span></div>
+      <div id="tile-body"></div>
+    </section>
+
+    <!-- 선택한 유닛 -->
+    <section id="unit-panel" class="panel hidden">
+      <div class="unit-head">
+        <span id="unit-icon" class="unit-icon"></span>
+        <div class="unit-title">
+          <div id="unit-name" class="unit-name"></div>
+          <div id="unit-moves" class="muted"></div>
+        </div>
+        <button id="btn-swap-unit" class="btn btn-small hidden" type="button" title="같은 타일의 다른 유닛 선택">다른 유닛</button>
+      </div>
+      <div id="unit-status" class="unit-status"></div>
+      <div class="unit-actions">
+        <button id="btn-skip" class="btn" type="button" title="이번 턴 건너뛰기 (Space)">대기</button>
+        <button id="btn-sentry" class="btn" type="button" title="직접 깨울 때까지 건너뛰기 (F)">경계</button>
+        <button id="btn-cancel-move" class="btn" type="button" title="경로 미리보기·이동 명령 취소">이동 취소</button>
+        <span id="found-city-wrap" class="tip-wrap" data-tip="2단계에서 구현">
+          <button id="btn-found-city" class="btn" type="button" disabled>도시 건설</button>
+        </span>
+      </div>
+    </section>
+
+    <!-- 오른쪽 아래: 턴 종료 + 미니맵 -->
+    <div id="corner">
+      <button id="btn-end-turn" class="btn btn-primary btn-end-turn" type="button" title="Enter">
+        <span id="end-turn-label">턴 종료</span>
+        <span id="end-turn-sub" class="end-turn-sub"></span>
+      </button>
+      <div id="minimap-box" class="panel">
+        <canvas id="minimap" aria-label="미니맵"></canvas>
+      </div>
+    </div>
+
+    <div id="toasts" aria-live="polite"></div>
+    </div>
+  </div>
+
+  <!-- 새 게임 화면 -->
+  <div id="new-game" class="overlay">
+    <form id="new-game-form" class="dialog panel" autocomplete="off">
+      <h1>새 게임</h1>
+      <p class="muted subtitle">육각형 지도 위에서 문명을 키우는 턴제 전략 — 1단계: 지도·이동·턴</p>
+      <label class="field">
+        <span>시드</span>
+        <input id="ng-seed" type="text" inputmode="text" placeholder="비우면 랜덤" maxlength="40">
+      </label>
+      <label class="field">
+        <span>지도 크기</span>
+        <select id="ng-size"></select>
+      </label>
+      <p id="ng-current" class="muted ng-current hidden"></p>
+      <div class="dialog-actions">
+        <button id="ng-cancel" class="btn hidden" type="button">취소</button>
+        <button id="ng-start" class="btn btn-primary" type="submit">시작</button>
+      </div>
+      <details class="help">
+        <summary>조작법</summary>
+        <ul>
+          <li><b>유닛 선택</b>: 클릭 / 탭</li>
+          <li><b>이동</b>: 목적지 우클릭(모바일은 탭·길게 누르기)으로 경로 미리보기 → 한 번 더 누르면 확정</li>
+          <li><b>카메라</b>: 드래그, WASD·방향키, 휠·핀치 줌, 미니맵 클릭</li>
+          <li><b>Enter</b>: 다음 유닛 / 턴 종료 · <b>Space</b>: 대기 · <b>F</b>: 경계 · <b>Esc</b>: 취소</li>
+          <li><b>F2</b>: 안개 전체 해제/복구 (디버그)</li>
+        </ul>
+      </details>
+    </form>
+  </div>
+
+  <!-- 순서대로 불러온다 (ES 모듈 없이 전역 Game 하나에 기능을 붙임) -->
+  <script src="js/data.js"></script>
+  <script src="js/rng.js"></script>
+  <script src="js/hex.js"></script>
+  <script src="js/mapgen.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/pathfinding.js"></script>
+  <script src="js/render.js"></script>
+  <script src="js/input.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
